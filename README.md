@@ -1,17 +1,35 @@
 # URL Shortener
 
-Open-source URL Shortener project.
+An open-source URL shortening platform built as a collaborative engineering project.
 
-## Tech Stack
+## Technology Stack
 
-- Frontend: React
-- Backend: Node.js + Express
-- Database: PostgreSQL
-- ORM: Prisma
-- Cache: Redis
-- Authentication: JWT
-- DevOps: Docker + GitHub Actions
+Frontend:
 
-## Project Status
+* React
 
-Project initialization and architecture setup in progress.
+Backend:
+
+* Spring Boot 3
+* Java 21
+
+Database:
+
+* PostgreSQL
+
+Cache:
+
+* Redis
+
+Authentication:
+
+* Spring Security + JWT
+
+Infrastructure:
+
+* Docker
+* GitHub Actions
+
+## Status
+
+Architecture finalized. Backend initialization in progress.
