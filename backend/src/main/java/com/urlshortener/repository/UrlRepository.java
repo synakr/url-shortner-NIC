@@ -25,6 +25,12 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     boolean existsByShortCode(String shortCode);
 
     List<Url> findByUserId(Long userId);
+    @Query("""
+    SELECT u
+    FROM Url u
+    WHERE u.user.id = :userId
+      AND u.expiresAt > :now
+    """)
     Page<Url> findByUserId(Long userId, Pageable pageable);
     Page<Url> findByUserUsernameOrderByClickCountDesc(String username, Pageable pageable);
     Long countByUserId(Long userId);
@@ -52,4 +58,13 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     AND u.expiresAt <= :now
     """)
     int deactivateExpiredUrls(@Param("now") LocalDateTime now);
+
+    @Query("""
+    SELECT u
+    FROM Url u
+    WHERE u.user.id = :userId
+      AND u.isActive = false
+      AND u.expiresAt <= :now
+    """)
+    Page<Url> findExpiredUrlsByUser(@Param("userId") Long userId, @Param("now") LocalDateTime now, Pageable pageable);
 }

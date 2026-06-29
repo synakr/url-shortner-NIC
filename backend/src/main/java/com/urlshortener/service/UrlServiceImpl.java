@@ -56,11 +56,18 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public void activateUrl(Long id, String username) {
+        User user = userRepository.findByUsername(username)
+        .orElseThrow(() -> new UserNotFoundException("User not found"));
+
         Url url = urlRepository.findByIdAndUserUsername(id, username)
         .orElseThrow(() -> new UrlNotFoundException("URL not found"));
 
         if (url.getIsActive()) {
             throw new RuntimeException("URL is already active");
+        }
+
+        if (urlRepository.countByUserIdAndIsActiveTrue(user.getId()) >= appProperties.getUrl().getMaxActiveUrls()) {
+            throw new RuntimeException("Active URL limit reached");
         }
 
         if(!url.getIsActive()) {
@@ -74,19 +81,13 @@ public class UrlServiceImpl implements UrlService {
                         "Grace period ended. URL cannot be reactivated."
                     );
                 }
+                LocalDateTime now=LocalDateTime.now();
+                url.setUpdatedAt(now);
                 url.setExpiresAt(
-                    LocalDateTime.now()
-                        .plusDays(appProperties.getUrl().getDefaultExtendDays())
+                    now.plusDays(appProperties.getUrl().getDefaultExtendDays())
                 );
             }
             url.setIsActive(true);
-        }
-
-
-        User user = userRepository.findByUsername(username)
-        .orElseThrow(() -> new UserNotFoundException("User not found"));
-        if (urlRepository.countByUserIdAndIsActiveTrue(user.getId()) >= appProperties.getUrl().getMaxActiveUrls()) {
-            throw new RuntimeException("Active URL limit reached");
         }
 
         url.setIsActive(true);
@@ -306,6 +307,28 @@ public class UrlServiceImpl implements UrlService {
             sb.append(CHARACTERS.charAt(RANDOM.nextInt(CHARACTERS.length())));
         }
         return sb.toString();
+    }
+
+    @Override
+    public UrlListResponse getExpiredUrlsByUser(String username, LocalDateTime now, Pageable pageable) {
+
+        User user = userRepository.findByUsername(username)
+        .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        Page<Url> urls = urlRepository.findExpiredUrlsByUser(user.getId(), now, pageable);
+
+        List<UrlResponse> list = urls.stream()
+                .map(this::mapToUrlResponse)
+                .toList();
+
+        return UrlListResponse.builder()
+                .urls(list)
+                .page(urls.getNumber())
+                .size(urls.getSize())
+                .totalElements(urls.getTotalElements())
+                .totalPages(urls.getTotalPages())
+                .last(urls.isLast())
+                .build();
     }
 
     @Override

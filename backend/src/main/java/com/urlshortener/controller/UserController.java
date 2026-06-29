@@ -11,6 +11,7 @@ import org.springframework.web.bind.annotation.PatchMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
+import java.time.LocalDateTime;
 
 import com.urlshortener.dto.ChangePasswordRequest;
 import com.urlshortener.dto.UpdateProfileRequest;
@@ -35,9 +36,15 @@ public class UserController {
     }
 
     @GetMapping("/urls")
-    public ResponseEntity<UrlListResponse>getMyUrls(Authentication authentication, @PageableDefault(page = 0, size = 10, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable){
+    public ResponseEntity<UrlListResponse>getMyUrls(Authentication authentication, @PageableDefault(page = 0, size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable){
         String username=authentication.getName();
         return ResponseEntity.ok(urlService.getUrlsByUsername(username, pageable));   //method defined in UserServiceImpl
+    }
+
+    @GetMapping("/urls/expired")
+    public ResponseEntity<UrlListResponse>getExpiredUrls(Authentication authentication, @PageableDefault(page = 0, size = 20, sort = "createdAt", direction = Sort.Direction.DESC) Pageable pageable) {
+        String username = authentication.getName();
+        return ResponseEntity.ok(urlService.getExpiredUrlsByUser(username, LocalDateTime.now(), pageable));
     }
 
     @PatchMapping("/deactivate")

@@ -2,7 +2,7 @@ package com.urlshortener.service;
 
 
 import java.util.List;
-
+import java.time.LocalDateTime;
 import org.springframework.data.domain.Pageable;
 
 import com.urlshortener.dto.GetUrlResponse;
@@ -19,6 +19,7 @@ public interface UrlService {
         GetAllUrlsResponse shortenUrl(CreateUrlRequest request, String email);
         GetUrlResponse getOriginalUrl(String shortCode);
         List<GetAllUrlsResponse> getUserUrls(Long userId);
+        UrlListResponse getExpiredUrlsByUser(String userId, LocalDateTime now, Pageable pageable);
         String resolveUrl(String shortCode, HttpServletRequest request);
         void deactivateUrl(Long id, String username);
         void activateUrl(Long id, String username);
