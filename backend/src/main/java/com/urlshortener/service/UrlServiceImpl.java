@@ -233,6 +233,7 @@ public class UrlServiceImpl implements UrlService {
 
             if (url.getExpiresAt() != null && url.getExpiresAt().isBefore(LocalDateTime.now())) {
                 url.setIsActive(false);
+                url.setExpiredAt(LocalDateTime.now());
                 urlRepository.save(url);
                 throw new UrlNotFoundException("URL has expired");
             }
