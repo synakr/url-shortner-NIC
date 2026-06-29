@@ -47,7 +47,7 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     @Query("""
     UPDATE Url u
     SET u.isActive = false,
-    expiredAt = :now
+    u.expiredAt = :now
     WHERE u.isActive = true
     AND u.expiresAt <= :now
     """)
