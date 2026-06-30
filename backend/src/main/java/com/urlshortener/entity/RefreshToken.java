@@ -30,8 +30,8 @@ public class RefreshToken {
      * Random opaque token.
      * NOT a JWT.
      */
-    @Column(nullable = false, unique = true, length = 512)
-    private String token;
+    @Column(name = "token_hash", nullable = false, unique = true, length = 64)
+    private String tokenHash;
 
     @ManyToOne(fetch = FetchType.LAZY, optional = false)
     @JoinColumn(name = "user_id", nullable = false)

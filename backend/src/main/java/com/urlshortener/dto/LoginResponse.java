@@ -12,9 +12,13 @@ import lombok.NoArgsConstructor;
 @AllArgsConstructor
 public class LoginResponse {
 
-    private String token;
+    private String accesstoken;
+
+    private String refreshtoken;
 
     private String username;
 
     private String email;
+
+    private String tokenType = "Bearer";
 }
