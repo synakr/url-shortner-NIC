@@ -337,7 +337,7 @@ public class UrlServiceImpl implements UrlService {
         User user = userRepository.findByUsername(username)
         .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-        Page<Url> urls = urlRepository.findByUserId(user.getId(), pageable);
+        Page<Url> urls = urlRepository.findByUserId(user.getId(), LocalDateTime.now(), pageable);
         List<UrlResponse> list = urls.stream().map(this::mapToUrlResponse).toList();
 
         return UrlListResponse.builder()
