@@ -143,4 +143,37 @@ public class GlobalExceptionHandler {
                 ));
     }
 
+    @ExceptionHandler(RefreshTokenExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenExpiryExceptions(
+                RefreshTokenExpiredException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED) 
+                .body(new ErrorResponse(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
+    @ExceptionHandler(RefreshTokenNotFoundException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenNotFoundExceptions(
+                RefreshTokenNotFoundException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED) 
+                .body(new ErrorResponse(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
+    @ExceptionHandler(RefreshTokenRevokedException.class)
+    public ResponseEntity<ErrorResponse> handleRefreshTokenrevokeExceptions(
+                RefreshTokenRevokedException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED) 
+                .body(new ErrorResponse(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
 } 
