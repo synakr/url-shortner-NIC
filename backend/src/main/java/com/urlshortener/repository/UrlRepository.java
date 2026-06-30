@@ -31,7 +31,7 @@ public interface UrlRepository extends JpaRepository<Url, Long> {
     WHERE u.user.id = :userId
       AND u.expiresAt > :now
     """)
-    Page<Url> findByUserId(Long userId, Pageable pageable);
+    Page<Url> findByUserId(@Param("userId") Long userId, @Param("now") LocalDateTime now, Pageable pageable);
     Page<Url> findByUserUsernameOrderByClickCountDesc(String username, Pageable pageable);
     Long countByUserId(Long userId);
     Long countByUserAndIsActiveTrue(User user);
