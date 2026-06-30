@@ -111,7 +111,7 @@ public class RefreshTokenServiceImpl implements RefreshTokenService {
     @Override
     public void revokeAll(User user) {
         refreshTokenRepository.findByUser(user)
-        .forEach(t -> t.setRevoked(true));
+        .forEach(t->t.setRevoked(true));
 
         // better: replace with bulk update later
     }
