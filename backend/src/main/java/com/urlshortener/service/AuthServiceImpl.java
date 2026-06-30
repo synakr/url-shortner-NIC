@@ -54,6 +54,7 @@ public class AuthServiceImpl implements AuthService {
         .accesstoken(token)
         .refreshtoken(refreshToken)
         .username(user.getUsername())
+        .tokenType("Bearer")
         .email(user.getEmail())
         .build();
     }
@@ -77,5 +78,12 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logout(String refreshToken) {
         refreshTokenService.revoke(refreshToken);
+    }
+
+    @Override
+    public void logoutAll(String username) {
+        User user = userRepository.findByUsername(username)
+        .orElseThrow(()->new RuntimeException("User not found"));
+        refreshTokenService.revokeAll(user);
     }
 }

@@ -1,11 +1,13 @@
 package com.urlshortener.controller;
 
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
+import com.urlshortener.entity.User;
 import com.urlshortener.dto.LoginRequest;
 import com.urlshortener.dto.LoginResponse;
 import com.urlshortener.dto.LogoutRequest;
@@ -45,5 +47,11 @@ public class AuthController {
     public ResponseEntity<String> logout(@RequestBody LogoutRequest request) {
         authService.logout(request.getRefreshToken());
         return ResponseEntity.ok("Logged out successfully");
+    }
+
+    @PostMapping("/logout-all")
+    public ResponseEntity<Void> logoutAll(Authentication authentication) {
+        authService.logoutAll(authentication.getName());
+        return ResponseEntity.ok().build();
     }
 }
