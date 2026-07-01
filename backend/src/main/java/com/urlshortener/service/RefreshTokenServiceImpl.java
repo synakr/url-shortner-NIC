@@ -9,8 +9,6 @@ import org.springframework.transaction.annotation.Transactional;
 import com.urlshortener.exception.RefreshTokenExpiredException;
 import com.urlshortener.exception.RefreshTokenNotFoundException;
 import com.urlshortener.exception.RefreshTokenRevokedException;
-
-import java.util.List;
 import com.urlshortener.entity.RefreshToken;
 import com.urlshortener.entity.User;
 import com.urlshortener.repository.RefreshTokenRepository;
