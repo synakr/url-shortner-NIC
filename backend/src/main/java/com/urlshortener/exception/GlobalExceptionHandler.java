@@ -176,4 +176,16 @@ public class GlobalExceptionHandler {
                         request.getRequestURI()
                 ));
     }
+
+    @ExceptionHandler(VerificationTokenExpiredException.class)
+    public ResponseEntity<ErrorResponse> handleVerificationTokenExpiryExceptions(
+                VerificationTokenExpiredException ex,
+            HttpServletRequest request) {
+
+        return ResponseEntity.status(HttpStatus.UNAUTHORIZED) 
+                .body(new ErrorResponse(
+                        ex.getMessage(),
+                        request.getRequestURI()
+                ));
+    }
 } 

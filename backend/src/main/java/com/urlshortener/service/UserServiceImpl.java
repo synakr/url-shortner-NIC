@@ -2,17 +2,28 @@ package com.urlshortener.service;
 
 import org.springframework.stereotype.Service;
 import org.springframework.security.crypto.password.PasswordEncoder;
+import org.springframework.web.util.UriComponentsBuilder;
+import org.springframework.beans.factory.annotation.Value;
 
 import com.urlshortener.config.AppProperties;
 import com.urlshortener.dto.ChangePasswordRequest;
+import com.urlshortener.dto.ResetPasswordRequest;
+import com.urlshortener.dto.ChangeEmailRequest;
+import com.urlshortener.dto.NewEmailRequest;
 import com.urlshortener.dto.RegisterRequest;
-import com.urlshortener.dto.UpdateProfileRequest;
+import com.urlshortener.dto.UpdateUsernameRequest;
 import com.urlshortener.entity.Role;
 import com.urlshortener.entity.User;
-import com.urlshortener.exception.InvalidPasswordException;
-import com.urlshortener.exception.UserAlreadyExistsException;
-import com.urlshortener.exception.UserNotFoundException;
+import com.urlshortener.exception.*;
 import com.urlshortener.repository.UserRepository;
+import com.urlshortener.service.emailverification.EmailService;
+import com.urlshortener.entity.EmailVerificationPurpose;
+import com.urlshortener.service.emailverification.EmailVerificationService;
+import com.urlshortener.util.RefreshTokenGenerator;
+import com.urlshortener.util.TokenHashUtil;
+import com.urlshortener.util.JsonUtil;
+import org.springframework.data.redis.core.RedisTemplate;
+import java.time.Duration;
 
 import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
@@ -24,7 +35,16 @@ public class UserServiceImpl implements UserService{
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RateLimiterService rateLimiterService;
+    private final EmailVerificationService emailVerificationService;
+    private final EmailService emailService;
+    private final JsonUtil JsonUtil;
     private final AppProperties appProperties;
+    private final RefreshTokenGenerator tokenGenerator;
+    private final TokenHashUtil hashUtil;
+    private final RedisTemplate<String, String> redisTemplate;
+    private final RefreshTokenService refreshTokenService;
+    @Value("${app.frontend-url}")
+    private String frontendUrl;
 
     @Override
     public void register(RegisterRequest request){
@@ -35,15 +55,180 @@ public class UserServiceImpl implements UserService{
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username already exists");
         }
+        String rawToken = tokenGenerator.generate();
+
+        emailVerificationService.generateAndStore(request.getEmail(),EmailVerificationPurpose.REGISTER,rawToken);
+
+        redisTemplate.opsForValue().set(
+                "reg:" + request.getEmail(),
+                JsonUtil.toJson(request),
+                Duration.ofMinutes(30)
+        );
+
+        emailService.sendEmail(
+                request.getEmail(),
+                "Verify your email",
+                buildLink(request.getEmail(),rawToken, "REGISTER")
+        ); 
+    }
+
+    private String buildLink(String email, String token, String purpose) {
+        return UriComponentsBuilder
+                .fromUriString(frontendUrl + "/verify-email")
+                .queryParam("email", email)
+                .queryParam("token", token)
+                .queryParam("purpose", purpose)
+                .toUriString();
+    }
+
+    @Override
+    public void verifyEmail(String email, String token, EmailVerificationPurpose purpose) {
+        switch (purpose) {
+        case REGISTER->verifyRegistration(email, token);
+        case EMAIL_CHANGE->confirmEmailChange(email, token);
+        default->throw new IllegalArgumentException("Unsupported verification purpose");
+        }
+    }
+
+    private void verifyRegistration(String email, String token) {
+
+        emailVerificationService.validate(email, token, EmailVerificationPurpose.REGISTER);
+        String key = "reg:" + email;
+        String json = redisTemplate.opsForValue().get(key);
+        if (json == null) {
+            throw new RuntimeException("Registration expired");
+        }
+        RegisterRequest request =
+                JsonUtil.fromJson(json, RegisterRequest.class);
+
         User user = User.builder()
-        .username(request.getUsername())
-        .email(request.getEmail())
-        .passwordHash(passwordEncoder.encode(request.getPassword()))
-        .role(Role.USER)
-        .isActive(true)
-        .build();
+                .username(request.getUsername())
+                .email(request.getEmail())
+                .passwordHash(passwordEncoder.encode(request.getPassword()))
+                .role(Role.USER)
+                .isActive(true)
+                .emailVerified(true)
+                .build();
 
         userRepository.save(user);
+        redisTemplate.delete(key);
+    }
+
+    @Override
+    @Transactional
+    public void requestEmailChange(String username, ChangeEmailRequest request) {
+
+        User user = userRepository.findByUsername(username)
+                .orElseThrow(() ->
+                        new UserNotFoundException("User not found"));
+
+        if (!passwordEncoder.matches(
+                request.getCurrentPassword(),
+                user.getPasswordHash())) {
+
+            throw new InvalidPasswordException("Incorrect password");
+        }
+
+        String rawToken = tokenGenerator.generate();
+
+        String hashed = hashUtil.hash(rawToken);
+
+        redisTemplate.opsForValue().set(
+                "auth:email_change_action:" + hashed,
+                user.getId().toString(),
+                Duration.ofMinutes(15));
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Confirm Email Change",
+                buildOldEmailLink(rawToken));
+    }
+
+    private String buildOldEmailLink(String token) {
+        return UriComponentsBuilder
+                .fromUriString(frontendUrl + "/change-email")
+                .queryParam("token", token)
+                .toUriString();
+    }
+
+    @Override
+    @Transactional
+    public void sendVerificationToNewEmail(
+            NewEmailRequest request) {
+
+        String hashed =hashUtil.hash(request.getActionToken());
+
+        String value = redisTemplate.opsForValue().get(
+                "auth:email_change_action:" + hashed);
+
+        if (value == null) {
+            throw new VerificationTokenExpiredException();
+        }
+
+        Long userId = Long.valueOf(value);
+
+        if (userRepository.existsByEmail(request.getNewEmail())) {
+            throw new UserAlreadyExistsException(
+                    "Email already exists");
+        }
+
+        String rawVerification =
+                tokenGenerator.generate();
+
+        emailVerificationService.generateAndStore(
+                request.getNewEmail(),
+                EmailVerificationPurpose.EMAIL_CHANGE,
+                rawVerification);
+
+        redisTemplate.opsForValue().set(
+                "auth:email_change_verify:"
+                        + request.getNewEmail(),
+                userId.toString(),
+                Duration.ofMinutes(15));
+
+        emailService.sendEmail(
+                request.getNewEmail(),
+                "Verify your new email",
+                buildNewEmailVerificationLink(
+                        request.getNewEmail(),
+                        rawVerification));
+
+        redisTemplate.delete("auth:email_change_action:" + hashed);
+    }
+
+    private String buildNewEmailVerificationLink(String email, String token) {
+        return UriComponentsBuilder
+                .fromUriString(frontendUrl + "/verify-email")
+                .queryParam("email", email)
+                .queryParam("token", token)
+                .queryParam("purpose", EmailVerificationPurpose.EMAIL_CHANGE)
+                .toUriString();
+    }
+
+    private void confirmEmailChange(String email,String token) {
+
+        emailVerificationService.validate(email,token,EmailVerificationPurpose.EMAIL_CHANGE);
+
+        String value =redisTemplate.opsForValue().get("auth:email_change_verify:"+ email);
+
+        if (value == null) {
+            throw new VerificationTokenExpiredException();
+        }
+
+        Long userId = Long.valueOf(value);
+
+        User user = userRepository.findById(userId)
+        .orElseThrow(()->new UserNotFoundException("User not found"));
+
+        user.setEmail(email);
+
+        user.setEmailVerified(true);
+
+        userRepository.save(user);
+
+        redisTemplate.delete("auth:email_change_verify:" + email);
+
+        refreshTokenService.revokeAll(user);
     }
 
     @Override
@@ -59,9 +244,9 @@ public class UserServiceImpl implements UserService{
 
     @Override
     @Transactional
-    public String updateProfile(String currentUsername, UpdateProfileRequest request) {
+    public String updateUsername(String currentusername, UpdateUsernameRequest request) {
 
-        User user=userRepository.findByUsername(currentUsername)
+        User user=userRepository.findByUsername(currentusername)
         .orElseThrow(()->new UserNotFoundException("User not found"));
 
         if(!user.getUsername().equals(request.getUsername())
@@ -70,39 +255,80 @@ public class UserServiceImpl implements UserService{
             "Username already exists");
         }
 
-        if(!user.getEmail().equals(request.getEmail())
-        && userRepository.existsByEmail(request.getEmail())) {
-            throw new UserAlreadyExistsException(
-            "Email already exists");
+        if (!passwordEncoder.matches(request.getPassword(),user.getPasswordHash())) {
+            throw new InvalidPasswordException("Password is incorrect");
         }
-        
 
         if(request.getUsername()!=null)user.setUsername(request.getUsername());
-        if(request.getEmail()!=null)user.setEmail(request.getEmail());
 
         userRepository.save(user);
-        return "Profile updated successfully. Please login again.";
+        return "Username updated successfully. Please login again.";
     }
 
     @Override
     @Transactional
-    public String changePassword(String username,ChangePasswordRequest request) {
+    public void requestPasswordChange(String username, ChangePasswordRequest request) {
 
-        User user=userRepository.findByUsername(username)
+        User user = userRepository.findByUsername(username)
         .orElseThrow(()->new UserNotFoundException("User not found"));
 
-        if(!passwordEncoder.matches(request.getCurrentPassword(),user.getPasswordHash())){
-            throw new InvalidPasswordException("Current password is incorrect");
+        if (!passwordEncoder.matches(request.getCurrentPassword(),user.getPasswordHash())) {
+            throw new InvalidPasswordException("Current password is incorrect.");
         }
 
+        String rawToken = tokenGenerator.generate();
+
+        String hashedToken = hashUtil.hash(rawToken);
+
+        redisTemplate.opsForValue().set(
+                "auth:password_change:" + hashedToken,
+                user.getId().toString(),
+                Duration.ofMinutes(15));
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Password Change Request",
+                buildPasswordChangeLink(rawToken));
+    }
+
+    private String buildPasswordChangeLink(String token) {
+
+        return UriComponentsBuilder
+                .fromUriString(frontendUrl + "/change-password")
+                .queryParam("token", token)
+                .toUriString();
+    }
+
+    @Override
+    @Transactional
+    public void confirmPasswordChange(ResetPasswordRequest request) {
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+            throw new PasswordMismatchException("Passwords do not match.");
+        }
+
+        String hashed = hashUtil.hash(request.getActionToken());
+
+        String value = redisTemplate.opsForValue().get(
+                "auth:password_change:" + hashed);
+
+        if (value == null) {
+            throw new VerificationTokenExpiredException();
+        }
+
+        Long userId = Long.valueOf(value);
+
+        User user = userRepository.findById(userId)
+        .orElseThrow(()->new UserNotFoundException("User not found"));
+
         if (passwordEncoder.matches(request.getNewPassword(),user.getPasswordHash())) {
-            throw new InvalidPasswordException("New password must be different");
+            throw new InvalidPasswordException("New password cannot be the same as current password.");
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
 
         userRepository.save(user);
-
-        return "Password changed successfully. Please login again.";
+        redisTemplate.delete("auth:password_change:" + hashed);
+        refreshTokenService.revokeAll(user);
     }
 }

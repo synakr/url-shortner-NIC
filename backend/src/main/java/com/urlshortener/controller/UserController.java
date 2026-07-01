@@ -8,13 +8,15 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.security.core.Authentication;
 import org.springframework.web.bind.annotation.GetMapping;
 import org.springframework.web.bind.annotation.PatchMapping;
+import org.springframework.web.bind.annotation.PostMapping;
 import org.springframework.web.bind.annotation.RequestBody;
 import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 
 import com.urlshortener.dto.ChangePasswordRequest;
-import com.urlshortener.dto.UpdateProfileRequest;
+import com.urlshortener.dto.ResetPasswordRequest;
+import com.urlshortener.dto.UpdateUsernameRequest;
 import com.urlshortener.dto.UrlListResponse;
 import com.urlshortener.service.UrlService;
 import com.urlshortener.service.UserService;
@@ -55,19 +57,29 @@ public class UserController {
         );
     }
 
-    @PatchMapping("/update/profile")
-    public ResponseEntity<String> updateProfile(@RequestBody UpdateProfileRequest request,Authentication authentication){
+    @PatchMapping("/update/username")
+    public ResponseEntity<String> updateUsername(@RequestBody UpdateUsernameRequest request,Authentication authentication){
 
-        userService.updateProfile(authentication.getName(), request);     //method defined in UserServiceImpl
+        userService.updateUsername(authentication.getName(), request);     //method defined in UserServiceImpl
 
         return ResponseEntity.status(HttpStatus.OK)
         .body("Profile updated. Please login again.");
     }
 
-    @PatchMapping("/update/password")
-    public ResponseEntity<String> changePassword(@Valid @RequestBody ChangePasswordRequest request,Authentication authentication) {
+    @PostMapping("/change-password/request")
+    public ResponseEntity<String> requestPasswordChange(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
 
-        return ResponseEntity.ok(userService.changePassword(authentication.getName(),request));     //method defined in UserServiceImpl
+        userService.requestPasswordChange(authentication.getName(),request);
+
+        return ResponseEntity.ok("A password change link has been sent to your registered email.");
+    }
+
+    @PostMapping("/change-password/confirm")
+    public ResponseEntity<String> confirmPasswordChange(@Valid @RequestBody ResetPasswordRequest request) {
+
+        userService.confirmPasswordChange(request);
+
+        return ResponseEntity.ok("Password changed successfully. Please log in again.");
     }
 
 }

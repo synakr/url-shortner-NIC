@@ -9,10 +9,8 @@ import com.urlshortener.dto.RefreshResponse;
 import com.urlshortener.entity.User;
 import com.urlshortener.entity.RefreshToken;
 import com.urlshortener.exception.InvalidPasswordException;
-import com.urlshortener.exception.RefreshTokenNotFoundException;
-import com.urlshortener.repository.RefreshTokenRepository;
+import com.urlshortener.exception.UserNotFoundException;
 import com.urlshortener.repository.UserRepository;
-import com.urlshortener.util.TokenHashUtil;
 
 import lombok.RequiredArgsConstructor;
 
@@ -21,8 +19,6 @@ import lombok.RequiredArgsConstructor;
 public class AuthServiceImpl implements AuthService {
 
     private final UserRepository userRepository;
-    private final RefreshTokenRepository refreshTokenRepository;
-    private final TokenHashUtil hashUtil;
     private final JwtService jwtService;
     private final PasswordEncoder passwordEncoder;
     private final RefreshTokenService refreshTokenService;
@@ -83,7 +79,7 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public void logoutAll(String username) {
         User user = userRepository.findByUsername(username)
-        .orElseThrow(()->new RuntimeException("User not found"));
+        .orElseThrow(()->new UserNotFoundException("User not found"));
         refreshTokenService.revokeAll(user);
     }
 }
