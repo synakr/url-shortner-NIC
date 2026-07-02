@@ -127,7 +127,7 @@ public class UserServiceImpl implements UserService{
     @Override
     @Transactional
     public void requestEmailChange(String username, ChangeEmailRequest request) {
-
+        rateLimiterService.checkRateLimit("change-email:" + username,appProperties.getRateLimit().getChangeEmail());
         User user = userRepository.findByUsername(username)
                 .orElseThrow(() ->
                         new UserNotFoundException("User not found"));

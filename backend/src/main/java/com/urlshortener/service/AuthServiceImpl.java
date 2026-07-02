@@ -33,10 +33,11 @@ public class AuthServiceImpl implements AuthService {
     @Override
     public LoginResponse login(LoginRequest request) {
 
-        rateLimiterService.checkRateLimit("rate:login:" + request.getUsername(),appProperties.getRateLimit().getLogin());
+        rateLimiterService.checkRateLimit("rate:login:" + request.getIdentifier(),appProperties.getRateLimit().getLogin());
 
         try{
-            User user = userRepository.findByUsername(request.getUsername())
+            User user = userRepository.findByUsername(request.getIdentifier())
+            .or(() -> userRepository.findByEmail(request.getIdentifier()))
             .orElseThrow(()->new RuntimeException("User not found"));
 
             if (!user.getIsActive()) {
@@ -45,7 +46,7 @@ public class AuthServiceImpl implements AuthService {
             }
             
             if (!passwordEncoder.matches(request.getPassword(),user.getPasswordHash())) {
-                auditService.log(request.getUsername(), user.getEmail(), AuditEvent.LOGIN_FAILED, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "Incorrect password");
+                auditService.log(user.getUsername(), user.getEmail(), AuditEvent.LOGIN_FAILED, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "Incorrect password");
                 throw new InvalidPasswordException(
                 "Current password is incorrect");
             }
@@ -61,7 +62,7 @@ public class AuthServiceImpl implements AuthService {
             .email(user.getEmail())
             .build();
         } catch (Exception e) {
-            auditService.log(request.getUsername(), "unknown", AuditEvent.LOGIN_FAILED, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), e.getMessage());
+            auditService.log(request.getIdentifier(), "unknown", AuditEvent.LOGIN_FAILED, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), e.getMessage());
             throw e;
         }
 

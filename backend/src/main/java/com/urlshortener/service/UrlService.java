@@ -11,6 +11,8 @@ import com.urlshortener.dto.UrlListResponse;
 import jakarta.servlet.http.HttpServletRequest;
 
 import com.urlshortener.dto.CreateUrlRequest;
+import com.urlshortener.dto.UpdateUrlRequest;
+import com.urlshortener.dto.UrlResponse;
 import com.urlshortener.dto.GetAllUrlsResponse;
 
 public interface UrlService {
@@ -23,4 +25,5 @@ public interface UrlService {
         String resolveUrl(String shortCode, HttpServletRequest request);
         void deactivateUrl(Long id, String username);
         void activateUrl(Long id, String username);
+        UrlResponse updateUrl(Long id, UpdateUrlRequest request,String username);
 }

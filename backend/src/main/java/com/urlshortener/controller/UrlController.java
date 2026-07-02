@@ -12,8 +12,10 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 
 import com.urlshortener.dto.CreateUrlRequest;
+import com.urlshortener.dto.UpdateUrlRequest;
 import com.urlshortener.dto.GetAllUrlsResponse;
 import com.urlshortener.dto.GetUrlResponse;
+import com.urlshortener.dto.UrlResponse;
 import com.urlshortener.service.UrlService;
 
 import jakarta.validation.Valid;
@@ -53,5 +55,12 @@ public class UrlController {
         return ResponseEntity.ok(
                 "User activated successfully"
         );
+    }
+
+    @PatchMapping("/urls/{id}")
+    public ResponseEntity<UrlResponse> updateUrl(@PathVariable Long id, @Valid @RequestBody UpdateUrlRequest request, Authentication authentication) {
+
+        UrlResponse response = urlService.updateUrl(id,request,authentication.getName());
+        return ResponseEntity.ok(response);
     }
 }
