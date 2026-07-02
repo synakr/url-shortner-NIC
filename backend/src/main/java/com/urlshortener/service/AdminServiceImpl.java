@@ -51,7 +51,7 @@ public class AdminServiceImpl implements AdminService {
             throw new RuntimeException("User is already inactive");
         }
         user.setIsActive(false);
-
+        user.setTokenVersion(user.getTokenVersion() + 1);
         userRepository.save(user);
     }
 }

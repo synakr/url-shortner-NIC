@@ -9,6 +9,9 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import com.urlshortener.service.CustomUserService;
 import com.urlshortener.service.JwtService;
+import com.urlshortener.entity.User;
+import com.urlshortener.exception.*;
+import com.urlshortener.repository.UserRepository;
 
 import java.io.IOException;
 import jakarta.servlet.FilterChain;
@@ -23,6 +26,7 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
 
     private final JwtService jwtService;
     private final CustomUserService userDetailsService;
+    private final UserRepository userRepository;
 
     @Override
     protected void doFilterInternal(
@@ -54,32 +58,33 @@ public class JwtAuthenticationFilter extends OncePerRequestFilter {
         try {
             username = jwtService.extractUsername(token);
         } catch (Exception e) {
-            // invalid/expired token → just continue request as unauthenticated
             filterChain.doFilter(request, response);
             return;
         }
 
-        if (username != null &&
-                SecurityContextHolder.getContext().getAuthentication() == null) {
+        if (username != null && SecurityContextHolder.getContext().getAuthentication() == null) {
 
-            UserDetails userDetails =
-                    userDetailsService.loadUserByUsername(username);
+            UserDetails userDetails =userDetailsService.loadUserByUsername(username);
 
-            if (jwtService.isTokenValid(token)) {
+            User user = userRepository.findByUsername(userDetails.getUsername())
+            .orElseThrow(() -> new UserNotFoundException("User not found"));
 
-                UsernamePasswordAuthenticationToken authToken =
-                        new UsernamePasswordAuthenticationToken(
-                                userDetails,
-                                null,
-                                userDetails.getAuthorities()
-                        );
-
-                authToken.setDetails(
-                        new WebAuthenticationDetailsSource().buildDetails(request)
-                );
-
-                SecurityContextHolder.getContext().setAuthentication(authToken);
+            // 🔥 CRITICAL SECURITY CHECK (tokenVersion + expiry)
+            if (!jwtService.isTokenValid(token, user)) {
+                filterChain.doFilter(request, response);
+                return;
             }
+
+            UsernamePasswordAuthenticationToken authToken =
+                    new UsernamePasswordAuthenticationToken(
+                            userDetails,
+                            null,
+                            userDetails.getAuthorities()
+                    );
+
+            authToken.setDetails(new WebAuthenticationDetailsSource().buildDetails(request));
+
+            SecurityContextHolder.getContext().setAuthentication(authToken);
         }
         filterChain.doFilter(request, response);
     }

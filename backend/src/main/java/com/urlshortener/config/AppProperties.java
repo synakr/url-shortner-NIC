@@ -44,5 +44,11 @@ public class AppProperties {
         private int shortenUrl;
         private int login;
         private int register;
+        private int forgotPassword;
+        private int resetPassword;
+        private int refresh;
+        private int updateUsername;
+        private int changePassword;
+        private int deactivateAccount;
     }
 }

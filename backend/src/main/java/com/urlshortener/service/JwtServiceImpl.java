@@ -15,6 +15,7 @@ import com.urlshortener.exception.UserNotFoundException;
 import com.urlshortener.repository.UserRepository;
 
 import io.jsonwebtoken.Jwts;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.security.Keys;
 import lombok.RequiredArgsConstructor;
 
@@ -44,6 +45,7 @@ public class JwtServiceImpl implements JwtService {
         claims.put("role", user.getRole().name());
         return Jwts.builder()
                 .claims(claims)
+                .claim("tokenVersion", user.getTokenVersion())
                 .subject(username)
                 .issuedAt(new Date())
                 .expiration(
@@ -66,19 +68,48 @@ public class JwtServiceImpl implements JwtService {
                 .getPayload()
                 .getSubject();
     }
+    @Override
+    public Long extractTokenVersion(String token) {
+
+        Claims claims = extractAllClaims(token);
+
+        Object version = claims.get("tokenVersion");
+
+        if (version instanceof Integer integer) {
+            return integer.longValue();
+        }
+
+        return (Long) version;
+    }
+
+    private Claims extractAllClaims(String token) {
+        return Jwts.parser()
+                .verifyWith(getSigningKey())
+                .build()
+                .parseSignedClaims(token)
+                .getPayload();
+    }
 
     @Override
-    public boolean isTokenValid(String token) {
+    public Boolean isTokenValid(String token, User user) {
         try {
             Jwts.parser()
                     .verifyWith(getSigningKey())
                     .build()
                     .parseSignedClaims(token);
 
-            return true;
+            return extractUsername(token).equals(user.getUsername())
+            && extractTokenVersion(token).equals(user.getTokenVersion())
+            && !isTokenExpired(token);
 
         } catch (Exception e) {
             return false;
         }
+    }
+
+    private boolean isTokenExpired(String token) {
+        return extractAllClaims(token)
+                .getExpiration()
+                .before(new Date());
     }
 }

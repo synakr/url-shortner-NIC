@@ -14,12 +14,16 @@ import com.urlshortener.entity.EmailVerificationPurpose;
 import com.urlshortener.dto.LoginRequest;
 import com.urlshortener.dto.LoginResponse;
 import com.urlshortener.dto.LogoutRequest;
+import com.urlshortener.config.AppProperties;
+import com.urlshortener.dto.ForgotPasswordRequest;
+import com.urlshortener.dto.ResetForgotPasswordRequest;
 import com.urlshortener.dto.ChangeEmailRequest;
 import com.urlshortener.dto.NewEmailRequest;
 import com.urlshortener.dto.RefreshRequest;
 import com.urlshortener.dto.RefreshResponse;
 import com.urlshortener.dto.RegisterRequest;
 import com.urlshortener.service.AuthService;
+import com.urlshortener.service.RateLimiterService;
 import com.urlshortener.service.UserService;
 
 import jakarta.validation.Valid;
@@ -29,6 +33,8 @@ import lombok.RequiredArgsConstructor;
 @RequestMapping("/api/auth")
 @RequiredArgsConstructor
 public class AuthController {
+    private final RateLimiterService rateLimiterService;
+    private final AppProperties appProperties;
     private final UserService userService;
     private final AuthService authService;
     @PostMapping("/register")
@@ -79,5 +85,27 @@ public class AuthController {
     public ResponseEntity<Void> logoutAll(Authentication authentication) {
         authService.logoutAll(authentication.getName());
         return ResponseEntity.ok().build();
+    }
+
+    @PostMapping("/forgot-password")
+    public ResponseEntity<String> forgotPassword(
+            @RequestBody ForgotPasswordRequest request) {
+                rateLimiterService.checkRateLimit(
+                    "rate:forgot:" + request.getEmail(),
+                    appProperties.getRateLimit().getForgotPassword()
+                );
+        userService.forgotPassword(request);
+        return ResponseEntity.ok("Reset link sent to email");
+    }
+
+    @PostMapping("/reset-password")
+    public ResponseEntity<String> resetPassword(
+            @RequestBody ResetForgotPasswordRequest request) {
+                rateLimiterService.checkRateLimit(
+                    "rate:reset:" + request.getToken(),
+                    appProperties.getRateLimit().getResetPassword()
+                );
+        userService.resetForgotPassword(request);
+        return ResponseEntity.ok("Password reset successful");
     }
 }
