@@ -52,4 +52,7 @@ public class User {
     @Column(name="role", nullable = false, length = 20)
     private Role role = Role.USER;
 
+    @Column(name = "token_version", nullable = false)
+    @Builder.Default
+    private Long tokenVersion = 0L;
 }

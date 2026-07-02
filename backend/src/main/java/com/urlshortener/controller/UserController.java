@@ -14,10 +14,12 @@ import org.springframework.web.bind.annotation.RequestMapping;
 import org.springframework.web.bind.annotation.RestController;
 import java.time.LocalDateTime;
 
+import com.urlshortener.config.AppProperties;
 import com.urlshortener.dto.ChangePasswordRequest;
 import com.urlshortener.dto.ResetPasswordRequest;
 import com.urlshortener.dto.UpdateUsernameRequest;
 import com.urlshortener.dto.UrlListResponse;
+import com.urlshortener.service.RateLimiterService;
 import com.urlshortener.service.UrlService;
 import com.urlshortener.service.UserService;
 
@@ -29,6 +31,8 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserController {
     
+    private final RateLimiterService rateLimiterService;
+    private final AppProperties appProperties;
     private final UserService userService;
     private final UrlService urlService;
 
@@ -51,6 +55,10 @@ public class UserController {
 
     @PatchMapping("/deactivate")
     public ResponseEntity<String> deactivate(Authentication authentication){
+        rateLimiterService.checkRateLimit(
+            "rate:deactivate:" + authentication.getName(),
+            appProperties.getRateLimit().getDeactivateAccount()
+        );
         userService.deactivateUser(authentication.getName());     //method defined in UserServiceImpl
         return ResponseEntity.ok(
             "Account deactivated. Login again anytime to reactivate."
@@ -59,7 +67,10 @@ public class UserController {
 
     @PatchMapping("/update/username")
     public ResponseEntity<String> updateUsername(@RequestBody UpdateUsernameRequest request,Authentication authentication){
-
+        rateLimiterService.checkRateLimit(
+            "rate:update-username:" + authentication.getName(),
+            appProperties.getRateLimit().getUpdateUsername()
+        );
         userService.updateUsername(authentication.getName(), request);     //method defined in UserServiceImpl
 
         return ResponseEntity.status(HttpStatus.OK)
@@ -68,7 +79,10 @@ public class UserController {
 
     @PostMapping("/change-password/request")
     public ResponseEntity<String> requestPasswordChange(@Valid @RequestBody ChangePasswordRequest request, Authentication authentication) {
-
+        rateLimiterService.checkRateLimit(
+            "rate:change-password:" + authentication.getName(),
+            appProperties.getRateLimit().getChangePassword()
+        );
         userService.requestPasswordChange(authentication.getName(),request);
 
         return ResponseEntity.ok("A password change link has been sent to your registered email.");
@@ -81,5 +95,6 @@ public class UserController {
 
         return ResponseEntity.ok("Password changed successfully. Please log in again.");
     }
+
 
 }

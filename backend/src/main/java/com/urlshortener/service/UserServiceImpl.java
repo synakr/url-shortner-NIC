@@ -8,12 +8,15 @@ import org.springframework.beans.factory.annotation.Value;
 import com.urlshortener.config.AppProperties;
 import com.urlshortener.dto.ChangePasswordRequest;
 import com.urlshortener.dto.ResetPasswordRequest;
+import com.urlshortener.dto.ForgotPasswordRequest;
+import com.urlshortener.dto.ResetForgotPasswordRequest;
 import com.urlshortener.dto.ChangeEmailRequest;
 import com.urlshortener.dto.NewEmailRequest;
 import com.urlshortener.dto.RegisterRequest;
 import com.urlshortener.dto.UpdateUsernameRequest;
 import com.urlshortener.entity.Role;
 import com.urlshortener.entity.User;
+import com.urlshortener.entity.AuditEvent;
 import com.urlshortener.exception.*;
 import com.urlshortener.repository.UserRepository;
 import com.urlshortener.service.emailverification.EmailService;
@@ -21,6 +24,10 @@ import com.urlshortener.entity.EmailVerificationPurpose;
 import com.urlshortener.service.emailverification.EmailVerificationService;
 import com.urlshortener.util.RefreshTokenGenerator;
 import com.urlshortener.util.TokenHashUtil;
+import com.urlshortener.util.RequestUtil;
+
+import io.micrometer.core.ipc.http.HttpSender.Request;
+
 import com.urlshortener.util.JsonUtil;
 import org.springframework.data.redis.core.RedisTemplate;
 import java.time.Duration;
@@ -32,11 +39,13 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class UserServiceImpl implements UserService{
 
+    private final RequestUtil requestUtil;
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
     private final RateLimiterService rateLimiterService;
     private final EmailVerificationService emailVerificationService;
     private final EmailService emailService;
+    private final AuditService auditService;
     private final JsonUtil JsonUtil;
     private final AppProperties appProperties;
     private final RefreshTokenGenerator tokenGenerator;
@@ -70,6 +79,7 @@ public class UserServiceImpl implements UserService{
                 "Verify your email",
                 buildLink(request.getEmail(),rawToken, "REGISTER")
         ); 
+        auditService.log(request.getUsername(), request.getEmail(), AuditEvent.REGISTER, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "User registration initiated");
     }
 
     private String buildLink(String email, String token, String purpose) {
@@ -261,6 +271,8 @@ public class UserServiceImpl implements UserService{
 
         if(request.getUsername()!=null)user.setUsername(request.getUsername());
 
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        refreshTokenService.revokeAll(user);
         userRepository.save(user);
         return "Username updated successfully. Please login again.";
     }
@@ -326,9 +338,76 @@ public class UserServiceImpl implements UserService{
         }
 
         user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
-
+        user.setTokenVersion(user.getTokenVersion() + 1);
+        refreshTokenService.revokeAll(user);
         userRepository.save(user);
         redisTemplate.delete("auth:password_change:" + hashed);
+        auditService.log(user.getUsername(), user.getEmail(), AuditEvent.PASSWORD_CHANGE, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "Password changed successfully");
+    }
+
+    @Override
+    public void forgotPassword(ForgotPasswordRequest request) {
+
+        User user = userRepository.findByEmail(request.getEmail())
+        .orElseThrow(() -> new UserNotFoundException("User not found"));
+        auditService.log(user.getUsername(), user.getEmail(), AuditEvent.FORGOT_PASSWORD_REQUEST, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "Password reset requested");
+        String rawToken = tokenGenerator.generate();
+        String hashed = hashUtil.hash(rawToken);
+
+        String key = "pwd-reset:" + user.getEmail();
+
+        redisTemplate.opsForValue().set(key, hashed, Duration.ofMinutes(15));
+
+        String link = buildResetLink(request.getEmail(),rawToken);
+
+        emailService.sendEmail(
+                user.getEmail(),
+                "Reset Password",
+                link
+        );
+    }
+
+    private String buildResetLink(String email, String token) {
+
+        return UriComponentsBuilder
+                .fromUriString(frontendUrl + "/reset-password")
+                .queryParam("email", email)
+                .queryParam("token", token)
+                .toUriString();
+    }
+    
+    @Override
+    @Transactional
+    public void resetForgotPassword(ResetForgotPasswordRequest request) {
+
+        if (!request.getNewPassword().equals(request.getConfirmPassword())) {
+                throw new IllegalArgumentException("Passwords do not match");
+        }
+
+        String key = "pwd-reset:" + request.getEmail();
+
+        String storedHash = redisTemplate.opsForValue().get(key);
+
+        if (storedHash == null) {
+                throw new RuntimeException("Reset token expired");
+        }
+
+        String incomingHash = hashUtil.hash(request.getToken());
+
+        if (!storedHash.equals(incomingHash)) {
+                throw new RuntimeException("Invalid reset token");
+        }
+
+        User user = userRepository.findByEmail(request.getEmail())
+                .orElseThrow(() -> new UserNotFoundException("User not found"));
+
+        user.setPasswordHash(passwordEncoder.encode(request.getNewPassword()));
+
+        // 🔥 SECURITY CRITICAL STEP
+        user.setTokenVersion(user.getTokenVersion() + 1);
         refreshTokenService.revokeAll(user);
+        userRepository.save(user);
+        redisTemplate.delete(key);
+        auditService.log(user.getUsername(), user.getEmail(), AuditEvent.PASSWORD_RESET, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "Password reset completed");
     }
 }

@@ -2,6 +2,8 @@ package com.urlshortener.service;
 
 import com.urlshortener.dto.ChangePasswordRequest;
 import com.urlshortener.dto.ResetPasswordRequest;
+import com.urlshortener.dto.ForgotPasswordRequest;
+import com.urlshortener.dto.ResetForgotPasswordRequest;
 import com.urlshortener.dto.RegisterRequest;
 import com.urlshortener.dto.ChangeEmailRequest;
 import com.urlshortener.dto.NewEmailRequest;
@@ -17,4 +19,6 @@ public interface UserService {
     String updateUsername(String username, UpdateUsernameRequest request);
     void requestPasswordChange(String username,ChangePasswordRequest request);
     void confirmPasswordChange(ResetPasswordRequest request);
+    void forgotPassword(ForgotPasswordRequest request);
+    void resetForgotPassword(ResetForgotPasswordRequest request);
 }
