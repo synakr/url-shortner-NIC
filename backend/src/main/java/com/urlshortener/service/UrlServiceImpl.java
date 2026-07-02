@@ -2,8 +2,10 @@ package com.urlshortener.service;
 
 import com.urlshortener.config.AppProperties;
 import com.urlshortener.dto.*;
+import com.urlshortener.util.RequestUtil;
 import com.urlshortener.entity.Url;
 import com.urlshortener.entity.User;
+import com.urlshortener.entity.AuditEvent;
 import com.urlshortener.exception.InvalidExpiryException;
 import com.urlshortener.exception.TooManyRequestsException;
 import com.urlshortener.exception.UrlNotFoundException;
@@ -35,6 +37,8 @@ public class UrlServiceImpl implements UrlService {
     private final RateLimiterService rateLimiterService;
     private final AnalyticsService analyticsService; 
     private final AppProperties appProperties;
+    private final AuditService auditService;
+    private final RequestUtil RequestUtil;
 
     private static final String CHARACTERS = "abcdefghijklmnopqrstuvwxyzABCDEFGHIJKLMNOPQRSTUVWXYZ0123456789";
     private static final SecureRandom RANDOM = new SecureRandom();
@@ -147,6 +151,14 @@ public class UrlServiceImpl implements UrlService {
                 .build();
 
         Url savedUrl = urlRepository.save(url);
+        auditService.log(
+            user.getUsername(), 
+            user.getEmail(), 
+            AuditEvent.URL_CREATED, 
+            RequestUtil.getIpAddress(), 
+            RequestUtil.getUserAgent(), 
+            "Created short link for: " + request.getOriginalUrl()
+        );
         return mapToResponse(savedUrl);
     }
 
@@ -378,6 +390,14 @@ public class UrlServiceImpl implements UrlService {
         Url updatedUrl = urlRepository.save(url);
         String cacheKey = "url:" + url.getShortCode();
         Boolean deleted = redisTemplate.delete(cacheKey);
+        auditService.log(
+            user.getUsername(), 
+            user.getEmail(), 
+            AuditEvent.URL_EDITED, 
+            RequestUtil.getIpAddress(), 
+            RequestUtil.getUserAgent(), 
+            "Edited short link from: " + request.getOriginalUrl()
+        );
         return mapToUrlResponse(updatedUrl);
     }
 }
