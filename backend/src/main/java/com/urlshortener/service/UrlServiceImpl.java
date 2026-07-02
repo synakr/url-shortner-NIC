@@ -42,9 +42,10 @@ public class UrlServiceImpl implements UrlService {
     @Override
     @Transactional
     public void deactivateUrl(Long id, String username) {
+        rateLimiterService.checkRateLimit("deactivate-url:" + username,appProperties.getRateLimit().getDeactivateUrl());
         Url url = urlRepository.findByIdAndUserUsername(id, username)
         .orElseThrow(() -> new UrlNotFoundException("URL not found"));
-
+        
         if (!url.getIsActive()) {
             throw new RuntimeException("URL is already inactive");
         }
@@ -52,30 +53,31 @@ public class UrlServiceImpl implements UrlService {
         url.setIsActive(false);
         urlRepository.save(url);
     }
-
+    
     @Override
     @Transactional
     public void activateUrl(Long id, String username) {
+        rateLimiterService.checkRateLimit("activate-url:" + username,appProperties.getRateLimit().getActivateUrl());
         User user = userRepository.findByUsername(username)
         .orElseThrow(() -> new UserNotFoundException("User not found"));
-
+        
         Url url = urlRepository.findByIdAndUserUsername(id, username)
         .orElseThrow(() -> new UrlNotFoundException("URL not found"));
-
+        
         if (url.getIsActive()) {
             throw new RuntimeException("URL is already active");
         }
-
+        
         if (urlRepository.countByUserIdAndIsActiveTrue(user.getId()) >= appProperties.getUrl().getMaxActiveUrls()) {
             throw new RuntimeException("Active URL limit reached");
         }
-
+        
         if(!url.getIsActive()) {
             if (url.getExpiredAt() != null) {
                 LocalDateTime deadline =
-                        url.getExpiredAt()
-                        .plusDays(appProperties.getUrl().getGracePeriodDays());
-
+                url.getExpiredAt()
+                .plusDays(appProperties.getUrl().getGracePeriodDays());
+                
                 if (LocalDateTime.now().isAfter(deadline)) {
                     throw new RuntimeException(
                         "Grace period ended. URL cannot be reactivated."
@@ -87,6 +89,7 @@ public class UrlServiceImpl implements UrlService {
                     now.plusDays(appProperties.getUrl().getDefaultExtendDays())
                 );
             }
+            redisTemplate.delete("url:" + url.getShortCode());
             url.setIsActive(true);
         }
 
@@ -360,5 +363,21 @@ public class UrlServiceImpl implements UrlService {
                 .updatedAt(url.getUpdatedAt())
                 .expiresAt(url.getExpiresAt())
                 .build();
+    }
+
+    @Override
+    @Transactional
+    public UrlResponse updateUrl(Long id,UpdateUrlRequest request,String username) {
+        rateLimiterService.checkRateLimit("update-url:" + username,appProperties.getRateLimit().getUpdateUrl());
+        User user = userRepository.findByUsername(username)
+        .orElseThrow(()->new UserNotFoundException("User not found"));
+
+        Url url = urlRepository.findByIdAndUserUsername(id, username)
+        .orElseThrow(() -> new UrlNotFoundException("URL not found"));
+        url.setOriginalUrl(request.getOriginalUrl());
+        Url updatedUrl = urlRepository.save(url);
+        String cacheKey = "url:" + url.getShortCode();
+        Boolean deleted = redisTemplate.delete(cacheKey);
+        return mapToUrlResponse(updatedUrl);
     }
 }

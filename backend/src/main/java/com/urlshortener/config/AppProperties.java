@@ -49,6 +49,10 @@ public class AppProperties {
         private int refresh;
         private int updateUsername;
         private int changePassword;
+        private int changeEmail;
+        private int updateUrl;
+        private int activateUrl;
+        private int deactivateUrl;
         private int deactivateAccount;
     }
 }
