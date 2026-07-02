@@ -15,5 +15,9 @@ public enum AuditEvent {
 
     EMAIL_CHANGE,
 
-    TOKEN_REFRESH
+    TOKEN_REFRESH,
+    
+    URL_CREATED,
+    URL_EDITED,
+    URL_DELETED
 }
