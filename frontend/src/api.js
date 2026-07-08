@@ -2,7 +2,7 @@ import axios from 'axios';
 import { broadcastLogout, clearAuthStorage } from './authSync';
 
 const api = axios.create({
-  baseURL: '/api',
+  baseURL: `${import.meta.env.VITE_API_URL}/api`,
   headers: { 'Content-Type': 'application/json' },
 });
 
@@ -94,7 +94,7 @@ api.interceptors.response.use(
 
       try {
         console.log("[Auth Interceptor] Sending refresh request to backend...");
-        const { data } = await axios.post('/api/auth/refresh', {
+        const { data } = await api.post("/auth/refresh", {
           refreshToken: storedRefresh,
         });
         
