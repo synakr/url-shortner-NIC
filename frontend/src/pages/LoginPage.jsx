@@ -4,6 +4,7 @@ import { authApi } from '../api';
 import { useAuth } from '../context/AuthContext';
 import { useToast } from '../context/ToastContext';
 import { Eye, EyeOff, LogIn, Zap } from 'lucide-react';
+import govtLogo from '../assets/NIC_logo.svg';
 
 export default function LoginPage() {
   const navigate = useNavigate();
@@ -48,8 +49,14 @@ export default function LoginPage() {
     <div className="auth-page">
       <div className="auth-bg-glow auth-bg-glow-1" />
       <div className="auth-bg-glow auth-bg-glow-2" />
-      <div className="auth-card">
-        <div className="auth-logo">
+      <div className="auth-card auth-card-split">
+        <div className="auth-form-panel">
+
+        <div className="auth-mobile-watermark">
+            <img src={govtLogo} alt="" />
+          </div>
+
+          <div className="auth-logo">
           <div className="auth-logo-text"><Zap size={22} style={{display:'inline',marginRight:6,verticalAlign:'middle'}} />LinkSnap</div>
           <div className="auth-logo-sub">Smart URL Shortener</div>
         </div>
@@ -111,6 +118,14 @@ export default function LoginPage() {
           {' · '}
           <Link to="/dashboard" className="auth-link">Back to home</Link>
         </p>
+        </div>
+
+        <aside className="auth-side-panel">
+          <img src={govtLogo} className="auth-side-logo" alt="Government Logo" />
+          <h2>Open Source URL Shortener</h2>
+          <p>Shorten. Share. Track.</p>
+        </aside>
+
       </div>
     </div>
   );
