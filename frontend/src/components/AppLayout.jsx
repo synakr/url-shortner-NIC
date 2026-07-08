@@ -1,7 +1,7 @@
-import { useState } from 'react';
-import { Outlet } from 'react-router-dom';
-import { Menu } from 'lucide-react';
-import Sidebar from './Sidebar';
+import { useState } from "react";
+import { Outlet } from "react-router-dom";
+import { Menu } from "lucide-react";
+import Sidebar from "./Sidebar";
 
 export default function AppLayout() {
   const [sidebarOpen, setSidebarOpen] = useState(() => window.innerWidth > 768);
@@ -10,10 +10,16 @@ export default function AppLayout() {
   const closeSidebar = () => setSidebarOpen(false);
 
   return (
-    <div className={`app-wrapper${sidebarOpen ? ' sidebar-open' : ' sidebar-closed'}`}>
-      {sidebarOpen && (
-        <div className="sidebar-overlay" onClick={closeSidebar} aria-hidden="true" />
-      )}
+    <div
+      className={`app-wrapper${sidebarOpen ? " sidebar-open" : " sidebar-closed"}`}
+    >
+      {/* {sidebarOpen && ( */}
+        <div
+          className="sidebar-overlay"
+          onClick={closeSidebar}
+          aria-hidden="true"
+        />
+      {/*)}*/}
       <Sidebar isOpen={sidebarOpen} onNavigate={closeSidebar} />
       <div className="main-area">
         <header className="top-bar">
@@ -21,7 +27,7 @@ export default function AppLayout() {
             type="button"
             className="menu-toggle"
             onClick={toggleSidebar}
-            aria-label={sidebarOpen ? 'Hide sidebar' : 'Show sidebar'}
+            aria-label={sidebarOpen ? "Hide sidebar" : "Show sidebar"}
             aria-expanded={sidebarOpen}
           >
             <Menu size={22} />
