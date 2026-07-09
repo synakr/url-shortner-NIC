@@ -63,12 +63,11 @@ export default function Sidebar({ isOpen, onNavigate }) {
 
   return (
     <aside className={`sidebar${isOpen ? ' open' : ''}`}>
-      <div className="sidebar-logo">
-        <div className="sidebar-logo-text">
-          <Zap size={16} style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }} />
-          LinkSnap
+      <div className="sidebar-logo" style={{ borderBottom: '1px solid var(--color-border)' }}>
+        <div className="sidebar-logo-text" style={{ color: 'var(--color-primary)', fontWeight: 'bold' }}>
+          LinkSnap Console
         </div>
-        <div className="sidebar-logo-sub">URL Shortener</div>
+        <div className="sidebar-logo-sub" style={{ color: 'var(--color-accent)', fontWeight: '600', letterSpacing: '0.05em' }}>GOVERNMENT OF INDIA</div>
       </div>
 
       <nav className="sidebar-nav">

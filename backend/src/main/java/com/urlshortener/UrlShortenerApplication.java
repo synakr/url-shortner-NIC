@@ -11,6 +11,7 @@ import org.springframework.scheduling.annotation.EnableScheduling;
 public class UrlShortenerApplication {
 
 	public static void main(String[] args) {
+		java.util.TimeZone.setDefault(java.util.TimeZone.getTimeZone("UTC"));
 		SpringApplication.run(UrlShortenerApplication.class, args);
 	}
 }
