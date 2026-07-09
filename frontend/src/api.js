@@ -6,6 +6,14 @@ const api = axios.create({
   headers: { 'Content-Type': 'application/json' },
 });
 
+// const api = axios.create({
+//   baseURL: import.meta.env.VITE_API_URL,
+//   headers: {
+//     "Content-Type": "application/json",
+//   },
+//   timeout: 10000,
+// });
+
 // Attach JWT on every request
 api.interceptors.request.use((config) => {
   const token = localStorage.getItem('token');
