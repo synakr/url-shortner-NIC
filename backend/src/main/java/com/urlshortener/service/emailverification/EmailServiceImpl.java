@@ -1,9 +1,15 @@
 package com.urlshortener.service.emailverification;
 
-import org.springframework.mail.SimpleMailMessage;
-import org.springframework.mail.javamail.JavaMailSender;
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.scheduling.annotation.Async;
 import org.springframework.stereotype.Service;
+import com.resend.services.emails.model.SendEmailRequest;
+
+import jakarta.annotation.PostConstruct;
+
+import com.resend.Resend;
+import com.resend.core.exception.ResendException;
 
 import lombok.RequiredArgsConstructor;
 
@@ -11,21 +17,30 @@ import lombok.RequiredArgsConstructor;
 @RequiredArgsConstructor
 public class EmailServiceImpl implements EmailService {
 
-    private final JavaMailSender mailSender;
+    @Value("${resend.api.key}")
+    private String apiKey;
+
+    private Resend resend;
+
+    @PostConstruct
+    public void init() {
+        this.resend = new Resend(apiKey);
+    }
 
     @Async
     @Override
     public void sendEmail(String to, String subject, String body) {
+        SendEmailRequest params = SendEmailRequest.builder()
+            .from("onboarding@resend.dev")
+            .to(to)
+            .subject(subject)
+            .text(body)
+            .build();
 
-        SimpleMailMessage message = new SimpleMailMessage();
-        message.setTo(to);
-        message.setSubject(subject);
-        message.setText(body);
-
-        // Optional: you can also remove this line and let JavaMail use the
-        // authenticated account.
-        message.setFrom("snaplink0107@gmail.com");
-
-        mailSender.send(message);
+        try {
+            resend.emails().send(params);
+        } catch (ResendException e) {
+            e.printStackTrace();
+        }
     }
 }
