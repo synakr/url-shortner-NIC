@@ -37,24 +37,33 @@ public class AuthController {
     private final AppProperties appProperties;
     private final UserService userService;
     private final AuthService authService;
+
     @PostMapping("/register")
-    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request){
-        userService.register(request);  //method defined in UserServiceImpl
+    public ResponseEntity<String> register(@Valid @RequestBody RegisterRequest request) {
+
+        System.out.println("REGISTER: Controller entered");
+
+        userService.register(request);
+
+        System.out.println("REGISTER: Service returned");
+
         return ResponseEntity.ok("User registered successfully");
     }
 
     @GetMapping("/verify-email")
-    public ResponseEntity<String> verifyEmail(@RequestParam String email,@RequestParam String token,@RequestParam EmailVerificationPurpose purpose) {
+    public ResponseEntity<String> verifyEmail(@RequestParam String email, @RequestParam String token,
+            @RequestParam EmailVerificationPurpose purpose) {
 
-        userService.verifyEmail(email,token, purpose);
+        userService.verifyEmail(email, token, purpose);
 
         return ResponseEntity.ok("Email verified successfully.");
     }
 
     @PostMapping("/change-email/request")
-    public ResponseEntity<String> requestEmailChange(@Valid @RequestBody ChangeEmailRequest request, Authentication authentication) {
+    public ResponseEntity<String> requestEmailChange(@Valid @RequestBody ChangeEmailRequest request,
+            Authentication authentication) {
 
-        userService.requestEmailChange(authentication.getName(),request);
+        userService.requestEmailChange(authentication.getName(), request);
         return ResponseEntity.ok("A verification link has been sent to your current email.");
     }
 
@@ -66,8 +75,8 @@ public class AuthController {
     }
 
     @PostMapping("/login")
-    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request){
-        return ResponseEntity.ok(authService.login(request));  //method defined in AuthServiceImpl
+    public ResponseEntity<LoginResponse> login(@Valid @RequestBody LoginRequest request) {
+        return ResponseEntity.ok(authService.login(request)); // method defined in AuthServiceImpl
     }
 
     @PostMapping("/refresh")
@@ -90,10 +99,9 @@ public class AuthController {
     @PostMapping("/forgot-password")
     public ResponseEntity<String> forgotPassword(
             @RequestBody ForgotPasswordRequest request) {
-                rateLimiterService.checkRateLimit(
-                    "rate:forgot:" + request.getEmail(),
-                    appProperties.getRateLimit().getForgotPassword()
-                );
+        rateLimiterService.checkRateLimit(
+                "rate:forgot:" + request.getEmail(),
+                appProperties.getRateLimit().getForgotPassword());
         userService.forgotPassword(request);
         return ResponseEntity.ok("Reset link sent to email");
     }
@@ -101,10 +109,9 @@ public class AuthController {
     @PostMapping("/reset-password")
     public ResponseEntity<String> resetPassword(
             @RequestBody ResetForgotPasswordRequest request) {
-                rateLimiterService.checkRateLimit(
-                    "rate:reset:" + request.getToken(),
-                    appProperties.getRateLimit().getResetPassword()
-                );
+        rateLimiterService.checkRateLimit(
+                "rate:reset:" + request.getToken(),
+                appProperties.getRateLimit().getResetPassword());
         userService.resetForgotPassword(request);
         return ResponseEntity.ok("Password reset successful");
     }

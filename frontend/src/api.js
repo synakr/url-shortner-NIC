@@ -146,7 +146,11 @@ export const authApi = {
   refresh: (refreshToken) => api.post('/auth/refresh', { refreshToken }),
   logout: (refreshToken)  => api.post('/auth/logout', { refreshToken }),
   logoutAll: ()            => api.post('/auth/logout-all'),
-  requestEmailChange: (data) => api.post('/auth/change-email/request', data),
+  requestEmailChange: (data) =>
+  api.post(
+    'https://url-shortner-nic-production.up.railway.app/api/auth/change-email/request',
+    data
+  ),
   forgotPassword: (data) => api.post('/auth/forgot-password', data),
   resetForgotPassword: (data) => api.post('/auth/reset-password', data),
   sendVerificationToNewEmail: (data) => api.post('/auth/change-email/send-verification', data),
