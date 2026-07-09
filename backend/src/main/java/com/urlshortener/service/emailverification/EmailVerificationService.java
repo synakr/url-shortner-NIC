@@ -1,6 +1,5 @@
 package com.urlshortener.service.emailverification;
 
-
 import com.urlshortener.entity.EmailVerificationPurpose;
 import com.urlshortener.entity.User;
 import com.urlshortener.exception.*;
