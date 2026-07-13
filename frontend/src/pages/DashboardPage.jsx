@@ -2,10 +2,12 @@ import { useState } from 'react';
 import { useNavigate } from 'react-router-dom';
 import { urlApi } from '../api';
 import { useToast } from '../context/ToastContext';
+import { useAuth } from '../context/AuthContext';
 import { Link2, Copy, Check, ExternalLink, Calendar, Zap, ArrowRight } from 'lucide-react';
 
 export default function DashboardPage() {
   const { addToast } = useToast();
+  const { isAuthenticated } = useAuth();
   const navigate = useNavigate();
 
   const [url, setUrl] = useState('');
@@ -14,6 +16,33 @@ export default function DashboardPage() {
   const [result, setResult] = useState(null);
   const [copied, setCopied] = useState(false);
   const [error, setError] = useState('');
+
+  if (!isAuthenticated) {
+    return (
+      <div className="page-content" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', minHeight: '60vh', textAlign: 'center', padding: '24px' }}>
+        <div style={{ maxWidth: '600px', backgroundColor: 'var(--color-surface)', border: '1px solid var(--color-border)', borderRadius: 'var(--radius-lg)', padding: '45px 35px', boxShadow: 'var(--shadow-md)' }}>
+          <div style={{ color: 'var(--color-primary)', display: 'inline-flex', padding: '20px', borderRadius: '50%', backgroundColor: 'var(--color-primary-dim)', marginBottom: 24 }}>
+            <Link2 size={40} />
+          </div>
+          <h1 className="page-title" style={{ fontSize: '1.8rem', fontWeight: 800, marginBottom: 12, color: 'var(--color-primary)', textTransform: 'none' }}>
+            NIC Tripura LinkSnap Console
+          </h1>
+          <p className="text-muted" style={{ fontSize: '0.95rem', lineHeight: 1.6, marginBottom: 32, color: 'var(--color-text-muted)' }}>
+            Welcome to the secure administrative URL shortening portal of National Informatics Centre (NIC), Tripura. Please sign in with your authorized credentials to shorten links, manage active redirections, and analyze performance metrics.
+          </p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'center' }}>
+            <button
+              onClick={() => navigate('/login')}
+              className="btn btn-primary btn-lg w-full"
+              style={{ justifyContent: 'center', padding: '14px 28px', fontSize: '1rem' }}
+            >
+              Sign In to Administrative Console
+            </button>
+          </div>
+        </div>
+      </div>
+    );
+  }
 
   const handleShorten = async (e) => {
     e.preventDefault();

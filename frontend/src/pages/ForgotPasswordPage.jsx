@@ -6,9 +6,11 @@ import { authApi } from '../api';
 function AuthShell({ children }) {
   return (
     <div className="auth-page">
-      <div className="auth-bg-glow auth-bg-glow-1" />
-      <div className="auth-bg-glow auth-bg-glow-2" />
-      <div className="auth-card">{children}</div>
+      <div className="auth-card auth-card-single">
+        <div className="auth-form-panel">
+          {children}
+        </div>
+      </div>
     </div>
   );
 }
