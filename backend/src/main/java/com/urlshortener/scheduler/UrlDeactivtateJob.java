@@ -16,7 +16,7 @@ public class UrlDeactivtateJob {
 
     private final UrlRepository urlRepository;
 
-    @Scheduled(cron="0 */5 * * * *")  
+    // @Scheduled(cron="0 */5 * * * *")  
     @Transactional
     protected void deactivateExpiredUrls(){
         int count = urlRepository.deactivateExpiredUrls(LocalDateTime.now());

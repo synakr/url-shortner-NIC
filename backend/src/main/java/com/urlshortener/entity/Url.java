@@ -10,7 +10,8 @@ import java.time.LocalDateTime;
 @Entity
 @Table(name = "urls", indexes = {
     @Index(name = "idx_urls_short_code", columnList = "short_code"),
-    @Index(name = "idx_urls_user_id",    columnList = "user_id")
+    @Index(name = "idx_urls_user_id",    columnList = "user_id"),
+    @Index(name = "idx_urls_active_expiry", columnList = "is_active, expires_at")
 })
 @Getter
 @Setter
