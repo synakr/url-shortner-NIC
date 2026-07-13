@@ -64,7 +64,6 @@ public class UserServiceImpl implements UserService{
         if (userRepository.existsByUsername(request.getUsername())) {
             throw new UserAlreadyExistsException("Username already exists");
         }
-        System.out.println("LOG: 1. Preparing to generate token");
         String rawToken = tokenGenerator.generate();
 
         emailVerificationService.generateAndStore(request.getEmail(),EmailVerificationPurpose.REGISTER,rawToken);
@@ -75,18 +74,11 @@ public class UserServiceImpl implements UserService{
                 Duration.ofMinutes(30)
         );
 
-        System.out.println("LOG: 2. Attempting to send email to: " + request.getEmail());
-    try {
         emailService.sendEmail(
                 request.getEmail(),
                 "Verify your email",
-                buildLink(request.getEmail(), rawToken, "REGISTER")
-        );
-        System.out.println("LOG: 3. Email service call finished successfully");
-    } catch (Exception e) {
-        System.err.println("LOG: 3. EMAIL SERVICE CRASHED: " + e.getMessage());
-        e.printStackTrace();
-    }
+                buildLink(request.getEmail(),rawToken, "REGISTER")
+        ); 
         auditService.log(request.getUsername(), request.getEmail(), AuditEvent.REGISTER, RequestUtil.getIpAddress(), RequestUtil.getUserAgent(), "User registration initiated");
     }
 
